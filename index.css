@@ -1,0 +1,17 @@
+/* Global styles and resets */
+html {
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+/* Custom font styles moved from index.html */
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+h1, h2, h3, .font-serif {
+  font-family: 'Playfair Display', serif;
+}
