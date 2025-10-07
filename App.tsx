@@ -155,8 +155,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
                         <input type="tel" id="whatsapp" value={formData.whatsapp} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" placeholder="(XX) XXXXX-XXXX" required />
                     </div>
                     <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-stone-700">Endereço de Entrega</label>
-                        <textarea id="address" value={formData.address} onChange={handleChange} rows={3} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" required></textarea>
+                        <label htmlFor="address" className="block text-sm font-medium text-stone-700">Retirada</label>
+                        <input type="text" id="address" value="Entregas, somente com retirada em loja" readOnly className="mt-1 block w-full px-3 py-2 bg-stone-100 border border-stone-300 rounded-md shadow-sm focus:outline-none text-stone-500" />
                     </div>
                     <div>
                         <h4 className="text-md font-medium text-stone-700 mb-2">Método de Pagamento</h4>
