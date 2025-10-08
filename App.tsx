@@ -107,29 +107,53 @@ const CartItemRow: React.FC<CartItemRowProps> = ({ item, onUpdateQuantity, onRem
 
 interface CheckoutFormProps {
     subtotal: number;
-    onSubmit: (details: { name: string; whatsapp: string; address: string; paymentMethod: string; }) => void;
+    onSubmit: (details: {
+        name: string;
+        whatsapp: string;
+        address: string;
+        paymentMethod: string;
+        data_agendamento: string;
+        turno: string;
+        horario_agendamento: string;
+    }) => void;
     onBack: () => void;
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack }) => {
-    const [formData, setFormData] = useState({ name: '', whatsapp: '', address: '', paymentMethod: '' });
+    const [formData, setFormData] = useState({
+        name: '',
+        whatsapp: '',
+        address: 'Entregas, somente com retirada em loja',
+        paymentMethod: '',
+        data_agendamento: '',
+        turno: '',
+        horario_agendamento: ''
+    });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { id, value } = e.target;
         setFormData(prev => ({ ...prev, [id]: value }));
     };
-    
+
     const handlePaymentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData(prev => ({ ...prev, paymentMethod: e.target.value }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.paymentMethod) {
-            alert('Por favor, selecione um método de pagamento.');
+        if (!formData.paymentMethod || !formData.data_agendamento || !formData.turno || !formData.horario_agendamento) {
+            alert('Por favor, preencha todos os campos de agendamento e pagamento.');
             return;
         }
         onSubmit(formData);
+    };
+    
+    const getTodayString = () => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = (today.getMonth() + 1).toString().padStart(2, '0');
+        const day = today.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
     };
 
     return (
@@ -146,20 +170,50 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
                     </div>
                 )}
                 <div className="space-y-4">
-                    <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-stone-700">Nome Completo</label>
-                        <input type="text" id="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" required />
-                    </div>
-                    <div>
-                        <label htmlFor="whatsapp" className="block text-sm font-medium text-stone-700">WhatsApp</label>
-                        <input type="tel" id="whatsapp" value={formData.whatsapp} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" placeholder="(XX) XXXXX-XXXX" required />
-                    </div>
-                    <div>
-                        <label htmlFor="address" className="block text-sm font-medium text-stone-700">Retirada</label>
-                        <input type="text" id="address" value="Entregas, somente com retirada em loja" readOnly className="mt-1 block w-full px-3 py-2 bg-stone-100 border border-stone-300 rounded-md shadow-sm focus:outline-none text-stone-500" />
-                    </div>
-                    <div>
-                        <h4 className="text-md font-medium text-stone-700 mb-2">Método de Pagamento</h4>
+                    {/* Campos de Agendamento */}
+                    <fieldset className="border-t pt-4">
+                        <legend className="text-md font-medium text-stone-700 mb-2">Agendamento da Retirada</legend>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <div>
+                                <label htmlFor="data_agendamento" className="block text-sm font-medium text-stone-700">Data para Retirada</label>
+                                <input type="date" id="data_agendamento" value={formData.data_agendamento} onChange={handleChange} min={getTodayString()} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" required />
+                            </div>
+                            <div>
+                                <label htmlFor="turno" className="block text-sm font-medium text-stone-700">Turno</label>
+                                <select id="turno" value={formData.turno} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" required>
+                                    <option value="" disabled>Selecione...</option>
+                                    <option value="manha">Manhã</option>
+                                    <option value="tarde">Tarde</option>
+                                    <option value="noite">Noite</option>
+                                </select>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label htmlFor="horario_agendamento" className="block text-sm font-medium text-stone-700">Horário Específico</label>
+                                <input type="time" id="horario_agendamento" value={formData.horario_agendamento} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" required />
+                            </div>
+                        </div>
+                    </fieldset>
+                    
+                    {/* Campos de Informações Pessoais */}
+                     <fieldset className="border-t pt-4">
+                        <legend className="text-md font-medium text-stone-700 mb-2">Suas Informações</legend>
+                        <div>
+                            <label htmlFor="name" className="block text-sm font-medium text-stone-700">Nome Completo</label>
+                            <input type="text" id="name" value={formData.name} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" required />
+                        </div>
+                        <div className="mt-4">
+                            <label htmlFor="whatsapp" className="block text-sm font-medium text-stone-700">WhatsApp</label>
+                            <input type="tel" id="whatsapp" value={formData.whatsapp} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-800 focus:border-amber-800" placeholder="(XX) XXXXX-XXXX" required />
+                        </div>
+                        <div className="mt-4">
+                            <label htmlFor="address" className="block text-sm font-medium text-stone-700">Retirada</label>
+                            <input type="text" id="address" value={formData.address} readOnly className="mt-1 block w-full px-3 py-2 bg-stone-100 border border-stone-300 rounded-md shadow-sm focus:outline-none text-stone-500" />
+                        </div>
+                    </fieldset>
+
+                    {/* Campo de Pagamento */}
+                    <fieldset className="border-t pt-4">
+                        <legend className="text-md font-medium text-stone-700 mb-2">Método de Pagamento</legend>
                         <div className="space-y-2">
                             {['PIX', 'Cartão de Crédito/Débito', 'Dinheiro'].map(method => (
                                 <label key={method} className="flex items-center p-3 border rounded-md has-[:checked]:bg-amber-100 has-[:checked]:border-amber-800">
@@ -168,10 +222,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
                                 </label>
                             ))}
                         </div>
-                    </div>
+                    </fieldset>
                 </div>
             </div>
-            <div className="p-4 border-t mt-auto space-y-4 bg-stone-50 -mx-6 -mb-6">
+            <div className="p-6 border-t mt-auto space-y-4 bg-stone-50 -mx-6">
                 <button type="submit" className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors">
                     Confirmar Pedido
                 </button>
@@ -190,7 +244,15 @@ interface CartSidebarProps {
     cartItems: CartItem[];
     onUpdateQuantity: (productId: number, newQuantity: number) => void;
     onRemoveItem: (productId: number) => void;
-    onSubmitOrder: (details: { name: string; whatsapp: string; address: string; paymentMethod: string; }) => void;
+    onSubmitOrder: (details: {
+        name: string;
+        whatsapp: string;
+        address: string;
+        paymentMethod: string;
+        data_agendamento: string;
+        turno: string;
+        horario_agendamento: string;
+    }) => void;
 }
 const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cartItems, onUpdateQuantity, onRemoveItem, onSubmitOrder }) => {
     const [view, setView] = useState<'cart' | 'checkout' | 'success'>('cart');
@@ -349,7 +411,15 @@ export default function App() {
         setCartItems(prevItems => prevItems.filter(item => item.id !== productId));
     }, []);
 
-    const handleSubmitOrder = async (details: { name: string; whatsapp: string; address: string; paymentMethod: string; }) => {
+    const handleSubmitOrder = async (details: {
+        name: string; 
+        whatsapp: string; 
+        address: string; 
+        paymentMethod: string; 
+        data_agendamento: string;
+        turno: string;
+        horario_agendamento: string;
+    }) => {
         const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
         try {
@@ -363,6 +433,10 @@ export default function App() {
                     payment_method: details.paymentMethod,
                     status: 'pending',
                     subtotal: subtotal,
+                    // --- NOVOS CAMPOS ---
+                    data_agendamento: details.data_agendamento,
+                    turno: details.turno,
+                    horario_agendamento: details.horario_agendamento
                 }])
                 .select()
                 .single();
