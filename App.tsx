@@ -215,7 +215,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
                     <fieldset className="border-t pt-4">
                         <legend className="text-md font-medium text-stone-700 mb-2">Método de Pagamento</legend>
                         <div className="space-y-2">
-                            {['PIX', 'Cartão de Crédito/Débito', 'Dinheiro'].map(method => (
+                            {['PIX', 'Cartão de Crédito/Débito', 'Dinheiro', 'Combinar no Caixa'].map(method => (
                                 <label key={method} className="flex items-center p-3 border rounded-md has-[:checked]:bg-amber-100 has-[:checked]:border-amber-800">
                                     <input type="radio" name="payment" value={method} checked={formData.paymentMethod === method} onChange={handlePaymentChange} className="h-4 w-4 text-amber-800 focus:ring-amber-800" />
                                     <span className="ml-3 text-stone-700">{method}</span>
