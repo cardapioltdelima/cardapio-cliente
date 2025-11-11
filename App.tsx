@@ -350,6 +350,7 @@ export default function App() {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Data Fetching
     useEffect(() => {
@@ -470,11 +471,20 @@ export default function App() {
     };
 
     const filteredProducts = useMemo(() => {
-        if (selectedCategory === 'all') {
-            return products;
+        let result = products;
+
+        if (selectedCategory !== 'all') {
+            result = result.filter(product => product.category_id === selectedCategory);
         }
-        return products.filter(product => product.category_id === selectedCategory);
-    }, [selectedCategory, products]);
+
+        if (searchTerm) {
+            result = result.filter(product =>
+                product.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+        }
+
+        return result;
+    }, [selectedCategory, products, searchTerm]);
 
     const cartCount = useMemo(() => {
         return cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -500,6 +510,16 @@ export default function App() {
                 <div className="text-center mb-12">
                      <h2 className="text-5xl font-extrabold text-stone-800 font-serif mb-2">Nosso Cardápio</h2>
                      <p className="text-lg text-stone-600 max-w-2xl mx-auto">Feito com carinho, para momentos especiais. Explore nossas delícias!</p>
+                </div>
+
+                <div className="mb-8">
+                    <input
+                        type="text"
+                        placeholder="Procurar por um produto..."
+                        className="w-full max-w-md mx-auto block p-3 border border-stone-300 rounded-full text-center"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
 
                 {isLoading ? (
