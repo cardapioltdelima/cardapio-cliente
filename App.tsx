@@ -115,11 +115,13 @@ interface CheckoutFormProps {
         data_agendamento: string;
         turno: string;
         horario_agendamento: string;
-    }) => void;
+    }) => Promise<void>;
     onBack: () => void;
+    errorMessage: string | null;
+    submitting: boolean;
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack, errorMessage, submitting }) => {
     const [formData, setFormData] = useState({
         name: '',
         whatsapp: '',
@@ -139,13 +141,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
         setFormData(prev => ({ ...prev, paymentMethod: e.target.value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formData.paymentMethod || !formData.data_agendamento || !formData.turno || !formData.horario_agendamento) {
             alert('Por favor, preencha todos os campos de agendamento e pagamento.');
             return;
         }
-        onSubmit(formData);
+        await onSubmit(formData);
     };
     
     const getTodayString = () => {
@@ -159,6 +161,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
             <div className="flex-grow overflow-y-auto p-6 space-y-6">
+                {errorMessage && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+                        <p className="font-bold">Não foi possível enviar o pedido</p>
+                        <p>{errorMessage}</p>
+                    </div>
+                )}
                 <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
                     <p className="font-bold">Atenção ao Horário de Encomendas</p>
                     <p>Pedidos devem ser feitos com um dia de antecedência ou antes das 10:00 da manhã do dia atual.</p>
@@ -226,10 +234,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ subtotal, onSubmit, onBack 
                 </div>
             </div>
             <div className="p-6 border-t mt-auto space-y-4 bg-stone-50 -mx-6">
-                <button type="submit" className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors">
-                    Confirmar Pedido
+                <button type="submit" disabled={submitting} className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition-colors disabled:bg-stone-300 disabled:cursor-not-allowed">
+                    {submitting ? 'Enviando...' : 'Confirmar Pedido'}
                 </button>
-                <button type="button" onClick={onBack} className="w-full text-center text-stone-600 font-semibold py-2">
+                <button type="button" onClick={onBack} disabled={submitting} className="w-full text-center text-stone-600 font-semibold py-2 disabled:text-stone-300 disabled:cursor-not-allowed">
                     Voltar ao Carrinho
                 </button>
             </div>
@@ -252,10 +260,12 @@ interface CartSidebarProps {
         data_agendamento: string;
         turno: string;
         horario_agendamento: string;
-    }) => void;
+    }) => Promise<void>;
 }
 const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cartItems, onUpdateQuantity, onRemoveItem, onSubmitOrder }) => {
     const [view, setView] = useState<'cart' | 'checkout' | 'success'>('cart');
+    const [submitting, setSubmitting] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     
     const subtotal = useMemo(() => {
         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
@@ -264,15 +274,26 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cartItems, o
     useEffect(() => {
         if (isOpen) {
             setView('cart');
+            setErrorMessage(null);
+            setSubmitting(false);
         } else {
             // Optional: Add a delay before resetting view if you have animations
             setTimeout(() => setView('cart'), 300);
         }
     }, [isOpen]);
 
-    const handleOrderSubmit = (details: { name: string; whatsapp: string; address: string; paymentMethod: string; }) => {
-        onSubmitOrder(details);
-        setView('success');
+    const handleOrderSubmit = async (details: { name: string; whatsapp: string; address: string; paymentMethod: string; data_agendamento: string; turno: string; horario_agendamento: string; }) => {
+        setErrorMessage(null);
+        setSubmitting(true);
+        try {
+            await onSubmitOrder(details);
+            setView('success');
+        } catch (e) {
+            const message = e instanceof Error ? e.message : 'Houve um erro ao enviar seu pedido. Por favor, tente novamente.';
+            setErrorMessage(message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -320,7 +341,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, cartItems, o
             )}
 
             {view === 'checkout' && (
-                <CheckoutForm subtotal={subtotal} onSubmit={handleOrderSubmit} onBack={() => setView('cart')} />
+                <CheckoutForm subtotal={subtotal} onSubmit={handleOrderSubmit} onBack={() => setView('cart')} errorMessage={errorMessage} submitting={submitting} />
             )}
 
             {view === 'success' && (
@@ -350,7 +371,6 @@ export default function App() {
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
 
     // Data Fetching
     useEffect(() => {
@@ -424,67 +444,45 @@ export default function App() {
         const subtotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
         try {
-            // 1. Create the order
-            const { data: orderData, error: orderError } = await supabase
-                .from('orders')
-                .insert([{
-                    customer_name: details.name,
-                    customer_whatsapp: details.whatsapp,
-                    delivery_address: details.address,
-                    payment_method: details.paymentMethod,
-                    status: 'pending',
-                    subtotal: subtotal,
-                    // --- NOVOS CAMPOS ---
-                    data_agendamento: details.data_agendamento,
-                    turno: details.turno,
-                    horario_agendamento: details.horario_agendamento
-                }])
-                .select()
-                .single();
-
-            if (orderError) throw orderError;
-            if (!orderData) throw new Error("Failed to create order.");
-
-            const newOrderId = orderData.id;
-
-            // 2. Create order items
-            const orderItemsToInsert = cartItems.map(item => ({
-                order_id: newOrderId,
+            const items = cartItems.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
-                unit_price: item.price
+                unit_price: item.price,
             }));
 
-            const { error: orderItemsError } = await supabase.from('order_items').insert(orderItemsToInsert);
+            const { data: orderId, error: rpcError } = await supabase.rpc('create_order_with_items', {
+                p_customer_name: details.name,
+                p_customer_whatsapp: details.whatsapp,
+                p_delivery_address: details.address,
+                p_payment_method: details.paymentMethod,
+                p_subtotal: subtotal,
+                p_data_agendamento: details.data_agendamento,
+                p_turno: details.turno,
+                p_horario_agendamento: details.horario_agendamento,
+                p_items: items,
+            });
 
-            if (orderItemsError) throw orderItemsError;
+            if (rpcError) throw rpcError;
+            if (!orderId) throw new Error('Falha ao criar pedido.');
 
             // 3. Clear cart after successful submission
             setCartItems([]);
 
         } catch (error) {
             console.error("Error submitting order:", error);
-            alert("Houve um erro ao enviar seu pedido. Por favor, tente novamente.");
-            // Don't close the cart or clear items if submission fails
-            throw error; // re-throw to prevent success UI from showing
+            if (error instanceof Error) {
+                throw error;
+            }
+            throw new Error("Houve um erro ao enviar seu pedido. Por favor, tente novamente.");
         }
     };
 
     const filteredProducts = useMemo(() => {
-        let result = products;
-
-        if (selectedCategory !== 'all') {
-            result = result.filter(product => product.category_id === selectedCategory);
+        if (selectedCategory === 'all') {
+            return products;
         }
-
-        if (searchTerm) {
-            result = result.filter(product =>
-                product.name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-        }
-
-        return result;
-    }, [selectedCategory, products, searchTerm]);
+        return products.filter(product => product.category_id === selectedCategory);
+    }, [selectedCategory, products]);
 
     const cartCount = useMemo(() => {
         return cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -510,16 +508,6 @@ export default function App() {
                 <div className="text-center mb-12">
                      <h2 className="text-5xl font-extrabold text-stone-800 font-serif mb-2">Nosso Cardápio</h2>
                      <p className="text-lg text-stone-600 max-w-2xl mx-auto">Feito com carinho, para momentos especiais. Explore nossas delícias!</p>
-                </div>
-
-                <div className="mb-8">
-                    <input
-                        type="text"
-                        placeholder="Procurar por um produto..."
-                        className="w-full max-w-md mx-auto block p-3 border border-stone-300 rounded-full text-center"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
                 </div>
 
                 {isLoading ? (
